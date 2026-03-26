@@ -1,0 +1,6 @@
+setting,instances,total_cost,avg_cost_per_instance
+full,500,817.018735,1.634037
+clarify_interact,500,1748.07961,3.496159
+clarify_interact_v2,500,1017.340723,2.034681
+interact,500,697.881455,1.395763
+hidden,500,899.425357,1.798851

@@ -1,0 +1,6 @@
+evaluation_setting,asked_resolved,asked_rate_pct,not_asked_resolved,not_asked_rate_pct
+Uncertainty-Aware (Single),216,58.54,90,68.7
+Full,249,67.48,105,80.15
+Hidden,175,47.43,99,75.57
+Uncertainty-Aware (Multi),245,66.4,102,77.86
+Interactive Baseline,252,68.29,100,76.34

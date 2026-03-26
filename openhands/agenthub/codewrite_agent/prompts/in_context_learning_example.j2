@@ -1,0 +1,67 @@
+Here's a running example of how to perform a task with the provided tools.
+
+--------------------- START OF EXAMPLE ---------------------
+
+USER: Create a list of numbers from 1 to 10, and display them in a web page at port 5000.
+
+A: Sure! Let me first check the current directory:
+<function=execute_bash>
+<parameter=command>
+pwd && ls
+</parameter>
+</function>
+
+USER: EXECUTION RESULT of [execute_bash]:
+/workspace
+openhands@runtime:~/workspace$
+
+A: There is no `app.py` file in the current directory. Let me create a Python file `app.py`:
+<function=str_replace_editor>
+<parameter=command>create</parameter>
+<parameter=path>/workspace/app.py</parameter>
+<parameter=file_text>
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    numbers = list(range(1, 11))
+    return '<table>' + ''.join([f'<tr><td>{i}</td></tr>' for i in numbers]) + '</table>'
+
+if __name__ == '__main__':
+    app.run(port=5000)
+</parameter>
+</function>
+
+USER: EXECUTION RESULT of [str_replace_editor]:
+File created successfully at: /workspace/app.py
+
+A:
+Now let me display the numbers in a table format:
+<function=str_replace_editor>
+<parameter=command>str_replace</parameter>
+<parameter=path>/workspace/app.py</parameter>
+<parameter=old_str>return '<table>' + ''.join([f'<tr><td>{i}</td></tr>' for i in numbers]) + '</table>'</parameter>
+<parameter=new_str>return '<table>' + ''.join([f'<tr><td>{i}</td></tr>' for i in numbers]) + '</table>'</parameter>
+</function>
+
+USER: EXECUTION RESULT of [str_replace_editor]:
+The file /workspace/app.py has been edited. Here's the result of running `cat -n` on a snippet of /workspace/app.py:
+     3
+     4  @app.route('/')
+     5  def index():
+     6      numbers = list(range(1, 11))
+     7      return '<table>' + ''.join([f'<tr><td>{i}</td></tr>' for i in numbers]) + '</table>'
+     8
+     9  if __name__ == '__main__':
+    10      app.run(port=5000)
+Review the changes and make sure they are as expected. Edit the file again if necessary.
+
+<function=finish>
+</function>
+
+--------------------- END OF EXAMPLE ---------------------
+
+Do NOT assume the environment is the same as in the example above.
+
+--------------------- NEW TASK DESCRIPTION ---------------------

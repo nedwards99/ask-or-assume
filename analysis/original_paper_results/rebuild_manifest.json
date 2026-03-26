@@ -1,0 +1,27 @@
+{
+  "batches": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "inputs": {
+    "report_root": "final_evaluation_outputs",
+    "qa_root": "qa_pairs",
+    "difficulty_map_csv": "swe-bench-annotation-results/ensembled_annotations_public.csv"
+  },
+  "required_batch_level_files": [
+    "final_evaluation_outputs/batch_{b}/{full,hidden,interact,clarify_interact,clarify_interact_v2}/report.json",
+    "final_evaluation_outputs/batch_{b}/{full,hidden,interact,clarify_interact,clarify_interact_v2}/output.jsonl",
+    "qa_pairs/batch_{b}/{clarify_interact,clarify_interact_v2,interact_with_qmark}/*_qa_pairs.jsonl",
+    "qa_pairs/batch_{b}/{clarify_interact,clarify_interact_v2,interact_with_qmark}/reports/*_token_report.jsonl",
+    "qa_pairs/batch_{b}/{clarify_interact,clarify_interact_v2,interact_with_qmark}/reports/*_bucket_token_report.json"
+  ],
+  "question_stats_metadata": {
+    "raw_v2_questions_total": 679,
+    "reported_v2_questions_total": 679
+  },
+  "figure_generated": true,
+  "figure_skipped_reason": null
+}

@@ -1,0 +1,50 @@
+{
+  "settings": [
+    "full",
+    "hidden",
+    "interact",
+    "clarify_interact_v2",
+    "clarify_interact"
+  ],
+  "rates": [
+    70.8,
+    54.8,
+    70.4,
+    61.2,
+    69.4
+  ],
+  "significance_brackets": [
+    {
+      "order": 0,
+      "left_setting": "clarify_interact_v2",
+      "right_setting": "clarify_interact",
+      "label": "***",
+      "left_x": 3.5600000000000005,
+      "right_x": 4.5600000000000005
+    },
+    {
+      "order": 1,
+      "left_setting": "interact",
+      "right_setting": "clarify_interact",
+      "label": "n.s.",
+      "left_x": 2.5600000000000005,
+      "right_x": 4.5600000000000005
+    },
+    {
+      "order": 2,
+      "left_setting": "hidden",
+      "right_setting": "clarify_interact",
+      "label": "***",
+      "left_x": 1.28,
+      "right_x": 4.5600000000000005
+    },
+    {
+      "order": 3,
+      "left_setting": "full",
+      "right_setting": "clarify_interact",
+      "label": "n.s.",
+      "left_x": 0.0,
+      "right_x": 4.5600000000000005
+    }
+  ]
+}
