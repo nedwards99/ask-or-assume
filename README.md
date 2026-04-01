@@ -1,6 +1,6 @@
 # Ask or Assume? Uncertainty-Aware Clarification-Seeking in Coding Agents
 
-> **Paper**: [Ask or Assume? Uncertainty-Aware Clarification-Seeking in Coding Agents](https://arxiv.org/abs/PLACEHOLDER)
+> **Paper**: [Ask or Assume? Uncertainty-Aware Clarification-Seeking in Coding Agents](https://arxiv.org/abs/2603.26233)
 >
 > This repository contains the code and evaluation setup for the paper above. We develop and evaluate uncertainty-aware clarification-seeking agents on an underspecified variant of SWE-bench Verified ([Vijayvargiya et al., 2026](https://arxiv.org/abs/2502.13069)), where agents must independently decide when to ask the user clarifying questions to resolve missing information. We use the [OpenHands](https://github.com/All-Hands-AI/OpenHands) agent framework for agent development and testing.
 
@@ -197,10 +197,13 @@ This work builds on the [OpenHands](https://github.com/All-Hands-AI/OpenHands) a
 If you use this work, please consider citing our paper:
 
 ```bibtex
-@misc{ask_or_assume_2026,
-  title={Ask or Assume? Uncertainty-Aware Clarification-Seeking in Coding Agents},
-  author={[TODO: add authors]},
-  year={2026},
-  note={ACL submission}
+@misc{edwards2026askassumeuncertaintyawareclarificationseeking,
+      title={Ask or Assume? Uncertainty-Aware Clarification-Seeking in Coding Agents}, 
+      author={Nicholas Edwards and Sebastian Schuster},
+      year={2026},
+      eprint={2603.26233},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2603.26233}, 
 }
 ```
