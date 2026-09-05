@@ -6,7 +6,7 @@
 
 ## 📋 Overview
 
-We evaluate five experimental settings on the SWE-bench Verified dataset, using **Claude Sonnet 4.5** as the coding agent backbone and **GPT-5.1** as the simulated user:
+We evaluate five experimental settings on the SWE-bench Verified dataset, using **Claude Sonnet 4.5** and **Kimi K2.6** as the coding agent backbones and **GPT-5.1** as the simulated user:
 
 | Setting | Paper name | Description |
 |---|---|---|
@@ -18,13 +18,13 @@ We evaluate five experimental settings on the SWE-bench Verified dataset, using 
 
 ### 📊 Key results
 
-| Setting | Resolve rate |
-|---|---|
-| Full | 70.80% |
-| Hidden | 54.80% |
-| Interactive Baseline | 70.40% |
-| UA-Single | 61.20% |
-| **UA-Multi** | **69.40%** |
+| Setting | Claude Sonnet 4.5 | Kimi K2.6 |
+|---|---|---|
+| Full | 70.80% | 72.80% |
+| Hidden | 54.80% | 55.40% |
+| Interactive Baseline | 70.40% | 47.20% |
+| UA-Single | 61.20% | 61.60% |
+| **UA-Multi** | **69.40%** | **69.40%** |
 
 Our UA-Multi agent closes the performance gap with agents operating on fully specified instructions, achieving a resolve rate closely matching Full (p = 0.458) and Interactive Baseline (p = 0.621), while significantly outperforming our UA-Single agent (p < 0.001). All p-values are computed via non-parametric permutation tests.
 
@@ -34,13 +34,19 @@ Install OpenHands by following the [OpenHands installation guide](https://docs.a
 
 ### LLM Configuration (`config.toml`)
 
-The evaluation uses two LLM configurations: one for the coding agent and one for the simulated user (the "fake user"). Add both to `evaluation/benchmarks/swe_bench/config.toml`:
+The evaluation uses one LLM configuration for the coding agent (either Claude Sonnet 4.5 or Kimi K2.6 in the paper) and one for the simulated user (the "fake user"). Add these to `evaluation/benchmarks/swe_bench/config.toml`:
 
 ```toml
-# Agent backbone (Claude Sonnet 4.5 in the paper)
+# Agent backbone — Claude Sonnet 4.5
 [llm.eval_claude_sonnet]
 model = "anthropic/claude-sonnet-4-5-20250929"
 api_key = "<your-anthropic-api-key>"
+
+# Agent backbone — Kimi K2.6 (alternative)
+[llm.eval_kimi]
+model = "moonshot/kimi-k2.6"
+api_key = "<your-moonshot-api-key>"
+base_url = "https://api.moonshot.ai/v1"
 
 # Simulated user (GPT-5.1 in the paper)
 [llm.fake_user]

@@ -29,6 +29,7 @@ from openhands.events.action.agent import IntentDecisionAction
 from openhands.events.event import Event
 from openhands.llm.llm import ModelResponse
 from openhands.llm.llm_utils import check_tools
+from openhands.llm.model_features import always_thinks
 from openhands.memory.condenser import Condenser
 from openhands.memory.condenser.condenser import Condensation, View
 from openhands.memory.conversation_memory import ConversationMemory
@@ -203,10 +204,13 @@ class IntentAgent(Agent):
         }
         #params['tools'] = check_tools(self.tools, self.llm.config)
         params['tools'] = check_tools([ClarifyDecisionTool], self.llm.config)
-        params['tool_choice'] = {
-            'type': 'function',
-            'function': {'name': ClarifyDecisionTool['function']['name']},
-        }
+        # Skip forced tool_choice for always-thinks models — they reject it
+        # while a reasoning block is present.
+        if not always_thinks(self.llm.config.model):
+            params['tool_choice'] = {
+                'type': 'function',
+                'function': {'name': ClarifyDecisionTool['function']['name']},
+            }
         params['extra_body'] = {
             'metadata': state.to_llm_metadata(
                 model_name=self.llm.config.model, agent_name=self.name

@@ -81,8 +81,7 @@ FUNCTION_CALLING_PATTERNS: list[str] = [
     # Google Gemini
     'gemini-2.5-pro*',
     # Others
-    'kimi-k2-0711-preview',
-    'kimi-k2-instruct',
+    'kimi-k2*',
     'qwen3-coder*',
     'qwen3-coder-480b-a35b-instruct',
     'deepseek-chat',
@@ -128,6 +127,18 @@ SUPPORTS_STOP_WORDS_FALSE_PATTERNS: list[str] = [
     # DeepSeek R1 family
     'deepseek-r1-0528*',
 ]
+
+# Models that always return `reasoning_content` on every turn and reject forced
+# `tool_choice` while a thinking block is present. Callers must (a) preserve
+# reasoning_content on assistant turns in history, (b) skip forcing tool_choice,
+# and (c) keep any delegate-prompt anchor for that reasoning visible in history.
+THINKING_ALWAYS_ON_PATTERNS: list[str] = [
+    'moonshot/*',
+]
+
+
+def always_thinks(model: str) -> bool:
+    return model_matches(model, THINKING_ALWAYS_ON_PATTERNS)
 
 
 def get_features(model: str) -> ModelFeatures:

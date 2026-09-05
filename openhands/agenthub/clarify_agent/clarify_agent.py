@@ -43,6 +43,7 @@ from openhands.events.event import Event, EventSource
 from openhands.events.observation.observation import Observation
 from openhands.events.observation.delegate import AgentDelegateObservation
 from openhands.llm.llm_utils import check_tools
+from openhands.llm.model_features import always_thinks
 from openhands.memory.condenser import Condenser
 from openhands.memory.condenser.condenser import Condensation, View
 from openhands.memory.conversation_memory import ConversationMemory
@@ -53,8 +54,17 @@ from openhands.runtime.plugins import (
 )
 from openhands.utils.prompt import PromptManager
 
-# Reminder message for Intent Agent
-REMINDER_MESSAGE = "Carefully check whether all key information is provided. If there's any ambiguity or missing details that could impact the main agent's work you should return `True` for `needs_clarification`. Only skip asking questions when you are absolutely sure all relevant information is complete."
+# Reminder message for Intent Agent.
+# The lenient variant appends an explicit escape clause; used for models that
+# always emit reasoning tokens (e.g. Moonshot Kimi) and tend to over-flag
+# underspecification. See paper Appendix B.2.
+REMINDER_MESSAGE_STRICT = "Carefully check whether all key information is provided. If there's any ambiguity or missing details that could impact the main agent's work you should return `True` for `needs_clarification`. Only skip asking questions when you are absolutely sure all relevant information is complete."
+REMINDER_MESSAGE_LENIENT = REMINDER_MESSAGE_STRICT.rstrip('.') + ", or when the user cannot provide any further details or explicitly asks you to keep working on the task."
+
+
+def _reminder_for(model: str) -> str:
+    return REMINDER_MESSAGE_LENIENT if always_thinks(model) else REMINDER_MESSAGE_STRICT
+
 SAFE_TYPES = (MessageAction, AgentThinkAction)
 
 class ClarifyAgent(Agent):
@@ -167,8 +177,8 @@ class ClarifyAgent(Agent):
                 logger.warning('Windows runtime does not support browsing yet')
             else:
                 tools.append(BrowserTool)
-        if self.config.enable_jupyter:
-            tools.append(IPythonTool)
+        # if self.config.enable_jupyter:
+        #     tools.append(IPythonTool)
         if self.config.enable_plan_mode:
             # In plan mode, we use the task_tracker tool for task management
             tools.append(create_task_tracker_tool(use_short_tool_desc))
@@ -275,7 +285,7 @@ class ClarifyAgent(Agent):
                     agent=self._intent_delegate_agent,
                     # Pass latest user context and mark delegate as persistent
                     inputs={
-                        'prompt': REMINDER_MESSAGE,
+                        'prompt': _reminder_for(self.llm.config.model),
                     },
                 )
 
@@ -307,9 +317,12 @@ class ClarifyAgent(Agent):
             params: dict = {
                 'messages': self.llm.format_messages_for_llm(messages),
             }
-            # Restrict tools to Clarify for this turn
+            # Restrict tools to Clarify for this turn. Skip forced tool_choice
+            # for always-thinks models — they reject it while a reasoning block
+            # is present.
             params['tools'] = check_tools([ClarifyTool], self.llm.config)
-            params['tool_choice'] = {'type': 'function', 'function': {'name': ClarifyTool['function']['name']}}
+            if not always_thinks(self.llm.config.model):
+                params['tool_choice'] = {'type': 'function', 'function': {'name': ClarifyTool['function']['name']}}
             params['extra_body'] = {
                 'metadata': state.to_llm_metadata(
                     model_name=self.llm.config.model, agent_name=self.name

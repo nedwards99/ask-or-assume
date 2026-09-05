@@ -83,6 +83,7 @@ from openhands.events.observation import (
 )
 from openhands.events.serialization.event import truncate_content
 from openhands.llm.metrics import Metrics
+from openhands.llm.model_features import always_thinks
 from openhands.runtime.runtime_status import RuntimeStatus
 from openhands.server.services.conversation_stats import ConversationStats
 from openhands.storage.files import FileStore
@@ -509,8 +510,11 @@ class AgentController:
             message_for_delegate: MessageAction | None = None
             if 'prompt' in action.inputs and action.inputs['prompt']:
                 message_for_delegate = MessageAction(content=action.inputs['prompt'])
-                # Hide the delegate message if IntentAgent
-                if action.agent == 'IntentAgent':
+                # Hide the delegate message if IntentAgent, unless the backbone
+                # always emits reasoning — the assistant turn's reasoning_content
+                # anchors to this message, so filtering it from history rebuilds
+                # would leave an orphaned reasoning block that Moonshot rejects.
+                if action.agent == 'IntentAgent' and not always_thinks(self.agent.llm.config.model):
                     message_for_delegate.hidden = True
             elif 'task' in action.inputs and action.inputs['task']:
                 message_for_delegate = MessageAction(

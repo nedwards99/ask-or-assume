@@ -207,6 +207,11 @@ class LLM(RetryMixin, DebugMixin):
         ):
             kwargs.pop('top_p', None)
 
+        # Moonshot Kimi models only accept temperature=1 and top_p=0.95
+        if 'moonshot/' in self.config.model:
+            kwargs['temperature'] = 1.0
+            kwargs['top_p'] = 0.95
+
         logger.debug(f'LLM call with kwargs: {kwargs}')
         self._completion = partial(
             litellm_completion,
@@ -776,6 +781,32 @@ class LLM(RetryMixin, DebugMixin):
             )
             logger.debug(f'Using custom cost per token: {cost_per_token}')
             extra_kwargs['custom_cost_per_token'] = cost_per_token
+
+        # Moonshot provider falls into litellm's generic else-branch which ignores
+        # cache_read_input_token_cost and charges full price for all prompt tokens.
+        # Compute cost manually using the correct per-bucket pricing.
+        if 'moonshot/' in self.config.model and extra_kwargs.get('custom_cost_per_token') is None:
+            try:
+                _model_name = self.config.model.split('/', 1)[1]
+                model_info = litellm.get_model_info(_model_name, custom_llm_provider='moonshot')
+                usage = getattr(response, 'usage', None)
+                if usage is not None:
+                    prompt_tokens = getattr(usage, 'prompt_tokens', 0) or 0
+                    completion_tokens = getattr(usage, 'completion_tokens', 0) or 0
+                    ptd = getattr(usage, 'prompt_tokens_details', None)
+                    cache_read = (getattr(ptd, 'cached_tokens', 0) or 0) if ptd else 0
+                    cache_write = getattr(usage, 'cache_creation_input_tokens', 0) or 0
+                    non_cached = prompt_tokens - cache_read - cache_write
+                    input_rate = model_info.get('input_cost_per_token', 0) or 0
+                    cache_read_rate = model_info.get('cache_read_input_token_cost', 0) or 0
+                    cache_write_rate = model_info.get('cache_creation_input_token_cost', 0) or 0
+                    output_rate = model_info.get('output_cost_per_token', 0) or 0
+                    cost = (non_cached * input_rate + cache_read * cache_read_rate
+                            + cache_write * cache_write_rate + completion_tokens * output_rate)
+                    self.metrics.add_cost(float(cost))
+                    return float(cost)
+            except Exception as e:
+                logger.debug(f'Moonshot cost calculation failed, falling back to litellm: {e}')
 
         # try directly get response_cost from response
         _hidden_params = getattr(response, '_hidden_params', {})

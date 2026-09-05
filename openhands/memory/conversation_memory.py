@@ -289,6 +289,7 @@ class ConversationMemory:
                 if assistant_msg.content and assistant_msg.content.strip()
                 else [],
                 tool_calls=assistant_msg.tool_calls,
+                reasoning_content=getattr(assistant_msg, 'reasoning_content', None),
             )
             return []
         elif isinstance(action, AgentFinishAction):
