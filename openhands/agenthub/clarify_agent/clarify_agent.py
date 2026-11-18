@@ -311,7 +311,9 @@ class ClarifyAgent(Agent):
                 reminder = "Before proceeding further, ask a clarifying question."
             messages = self._get_messages(condensed_history, initial_user_message)
             messages.append(
-                Message(role='system', content=[TextContent(text=reminder)])
+                # Qwen's chat template rejects a system message after the first turn.
+                Message(role='user' if 'qwen' in self.llm.config.model.lower() else 'system',
+                        content=[TextContent(text=reminder)])
             )
 
             params: dict = {

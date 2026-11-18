@@ -70,6 +70,22 @@ from openhands.utils.shutdown_listener import sleep_if_should_continue
 USE_HINT_TEXT = os.environ.get('USE_HINT_TEXT', 'false').lower() == 'true'
 RUN_WITH_BROWSING = os.environ.get('RUN_WITH_BROWSING', 'false').lower() == 'true'
 ENABLE_LLM_EDITOR = os.environ.get('ENABLE_LLM_EDITOR', 'false').lower() == 'true'
+# Drop all new outbound connections from the sandbox (no GitHub/PyPI/HF lookups).
+# LLM and user-simulator calls are made host-side, so they are unaffected.
+BLOCK_SANDBOX_NETWORK = (
+    os.environ.get('BLOCK_SANDBOX_NETWORK', 'true').lower() == 'true'
+)
+NETLOCK_IMAGE = 'oh-netlock:latest'
+# IPv4 must succeed; IPv6 is best-effort (it may be disabled in the container).
+NETLOCK_RULES = (
+    'set -e; '
+    'iptables -A OUTPUT -o lo -j ACCEPT; '
+    'iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT; '
+    'iptables -P OUTPUT DROP; '
+    '(ip6tables -A OUTPUT -o lo -j ACCEPT && '
+    'ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT && '
+    'ip6tables -P OUTPUT DROP) 2>/dev/null || true'
+)
 BenchMode = Literal['swe', 'swt', 'swt-ci']
 
 # Global variable to track dataset type
@@ -328,11 +344,11 @@ def initialize_runtime(
         # Construct the full path for the desired file name within the temporary directory
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
         # Write to the file with the desired name within the temporary directory
+        # Only the fields the entry script needs: the full record holds the gold
+        # patch, test patch and original issue, which the agent could read.
+        inst = instance if isinstance(instance, dict) else instance.to_dict()
         with open(temp_file_path, 'w') as f:
-            if not isinstance(instance, dict):
-                json.dump([instance.to_dict()], f)
-            else:
-                json.dump([instance], f)
+            json.dump([{k: inst[k] for k in ('instance_id', 'repo', 'version')}], f)
 
         # Copy the file to the desired location
         runtime.copy_to(temp_file_path, '/swe_util/eval_data/instances/')
@@ -374,6 +390,14 @@ def initialize_runtime(
         obs.exit_code == 0,
         f'Failed to source /swe_util/{entry_script_path}: {str(obs)}',
     )
+
+    # The entry script is the only reader of the instance file; remove it.
+    action = CmdRunAction(command='rm -rf /swe_util/eval_data')
+    action.set_hard_timeout(600)
+    logger.info(action, extra={'msg_type': 'ACTION'})
+    obs = runtime.run_action(action)
+    logger.info(obs, extra={'msg_type': 'OBSERVATION'})
+    assert_and_raise(obs.exit_code == 0, f'Failed to remove eval_data: {str(obs)}')
 
     action = CmdRunAction(command=f'cd /workspace/{workspace_dir_name}')
     action.set_hard_timeout(600)
@@ -438,9 +462,63 @@ def initialize_runtime(
             f'Expected to find python interpreter from testbed, but got: {str(obs)}',
         )
 
+    if BLOCK_SANDBOX_NETWORK:
+        _block_sandbox_network(runtime)
+
     logger.info('-' * 30)
     logger.info('END Runtime Initialization Fn')
     logger.info('-' * 30)
+
+
+def _block_sandbox_network(runtime: Runtime) -> None:
+    """Drop new outbound connections from the sandbox container.
+
+    The rules are applied from a short-lived sidecar that shares the sandbox's
+    network namespace, so the agent (root, but without NET_ADMIN) cannot undo
+    them. Replies on the host -> action-server connection stay allowed.
+    """
+    import io
+
+    import docker
+
+    client = getattr(runtime, 'docker_client', None)
+    container = getattr(runtime, 'container', None)
+    assert_and_raise(
+        client is not None and container is not None,
+        'BLOCK_SANDBOX_NETWORK requires the docker runtime '
+        '(set BLOCK_SANDBOX_NETWORK=false to run without it)',
+    )
+    try:
+        client.images.get(NETLOCK_IMAGE)
+    except docker.errors.ImageNotFound:
+        logger.info(f'Building {NETLOCK_IMAGE}')
+        client.images.build(
+            fileobj=io.BytesIO(
+                b'FROM alpine:3.20\nRUN apk add --no-cache iptables ip6tables\n'
+            ),
+            tag=NETLOCK_IMAGE,
+        )
+    client.containers.run(
+        NETLOCK_IMAGE,
+        ['sh', '-c', NETLOCK_RULES],
+        network_mode=f'container:{container.id}',
+        cap_add=['NET_ADMIN'],
+        remove=True,
+    )
+
+    # Verify: a direct connection (no DNS needed) must now fail.
+    action = CmdRunAction(
+        command='python3 -c "import socket; socket.create_connection((\'1.1.1.1\', 443), 5)"'
+    )
+    action.set_hard_timeout(60)
+    logger.info(action, extra={'msg_type': 'ACTION'})
+    obs = runtime.run_action(action)
+    logger.info(obs, extra={'msg_type': 'OBSERVATION'})
+    assert_and_raise(
+        obs.exit_code not in (0, -1),
+        f'Sandbox network block did not take effect: {str(obs)}',
+    )
+    logger.info('Sandbox outbound network blocked')
 
 
 def complete_runtime(

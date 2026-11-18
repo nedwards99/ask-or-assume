@@ -275,11 +275,11 @@ def initialize_runtime(
         # Construct the full path for the desired file name within the temporary directory
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
         # Write to the file with the desired name within the temporary directory
+        # Only the fields the entry script needs: the full record holds the gold
+        # patch, test patch and original issue, which the agent could read.
+        inst = instance if isinstance(instance, dict) else instance.to_dict()
         with open(temp_file_path, 'w') as f:
-            if not isinstance(instance, dict):
-                json.dump([instance.to_dict()], f)
-            else:
-                json.dump([instance], f)
+            json.dump([{k: inst[k] for k in ('instance_id', 'repo', 'version')}], f)
 
         # Copy the file to the desired location
         runtime.copy_to(temp_file_path, '/swe_util/eval_data/instances/')
