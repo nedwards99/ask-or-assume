@@ -211,6 +211,9 @@ class IntentAgent(Agent):
                 'type': 'function',
                 'function': {'name': ClarifyDecisionTool['function']['name']},
             }
+        # Qwen on llama.cpp repeats clarify_decision under a forced tool_choice; allow one call.
+        if 'qwen' in self.llm.config.model.lower():
+            params['parallel_tool_calls'] = False
         params['extra_body'] = {
             'metadata': state.to_llm_metadata(
                 model_name=self.llm.config.model, agent_name=self.name
@@ -219,6 +222,10 @@ class IntentAgent(Agent):
         response = self.llm.completion(**params)
         logger.debug(f'Response from LLM: {response}')
         actions = self.response_to_actions(response)
+        # Qwen can emit several clarify_decision calls in one response; queued extras
+        # would be replayed as stale verdicts on later delegations.
+        if 'qwen' in self.llm.config.model.lower():
+            actions = actions[:1]
         logger.debug(f'Actions after response_to_actions: {actions}')
         expects_reply = any(
             isinstance(action, MessageAction) and action.wait_for_response
